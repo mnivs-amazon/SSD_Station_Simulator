@@ -4,7 +4,7 @@ A web-based simulator for modeling and visualizing package flow through Same-Day
 
 ## Overview
 
-The simulator models the full lifecycle of packages through a delivery station:
+The simulator models the full lifecycle of packages through a delivery station. The default flow is:
 
 1. **Inbound** → Packages arrive and wait for processing
 2. **Pick** → Associates pick items from shelves
@@ -15,13 +15,16 @@ The simulator models the full lifecycle of packages through a delivery station:
 7. **Staging** → Closed Routes wait before loading
 8. **Loading** → Routes are loaded onto delivery vehicles and dispatched
 
+The **Workflow** tab lets you customize the flow sequence, add zone types (e.g. chilled, frozen, ambient, produce), and define per-stage dwell times.
+
 ## Features
 
 - **Visual simulation** — Canvas-based visualization of zones, packages, and routes
+- **Workflow tab** — Define package flow sequence, enable/disable zone types (V5 + V3 extended), set per-stage times
 - **Configurable parameters** — Package rate, sectors, staging zones, cart capacity (wt), flush thresholds
 - **Per-stage timing** — Adjustable dwell times for each stage (inbound, pick, slam, conveyor, induct, staging, loading)
-- **Editor mode** — Add, move, resize, and delete zones to design custom layouts
-- **Template I/O** — Export and import station layouts as JSON
+- **Editor mode** — Add, move, resize, and delete zones; zone types shown in editor come from Workflow config
+- **Template I/O** — Export and import station layouts as JSON (includes workflow config)
 - **Metrics panel** — Throughput, cycle time, zone utilization, packages per stage
 - **Wiki** — Built-in documentation for zones and concepts
 - **Logs tab** — Event log for package flow (enable Debug Logging in Config)
@@ -114,6 +117,7 @@ Or with pnpm or yarn: `pnpm build` / `pnpm start` or `yarn build` / `yarn start`
 │   ├── control-bar.tsx      # Play/pause, speed slider, mode
 │   ├── config-panel.tsx     # Configuration sidebar
 │   ├── metrics-panel.tsx   # Live metrics
+│   ├── workflow-panel.tsx   # Workflow: flow sequence, zone types
 │   ├── logs-panel.tsx      # Event log (package & route flow)
 │   ├── editor-toolbar.tsx  # Edit-mode tools
 │   ├── wiki-panel.tsx      # Documentation
@@ -130,7 +134,20 @@ Or with pnpm or yarn: `pnpm build` / `pnpm start` or `yarn build` / `yarn start`
 
 ## Configuration
 
-Key parameters (configurable in the right panel):
+### Top tabs
+
+- **Simulator** — Main canvas, controls, metrics, config
+- **Wiki** — Documentation for zones and concepts
+- **Workflow** — Define package flow sequence, enable zone types, set per-stage times
+- **Logs** — Event log (enable Debug Logging in Config)
+
+### Workflow tab
+
+- **Flow sequence** — Order packages move through zones (e.g. inbound → pick → slam → conveyor → induct). Add, remove, or reorder stages. Flow ends at Route Cart (assignment), then Staging → Loading.
+- **Zone types** — Enable/disable zone types for the editor. Supports V5 + V3 extended types: inbound, pick, slam, conveyor, induct, route_cart, staging, loading, chilled, frozen, ambient, produce, chilled_staging, frozen_staging, ambient_staging, cart_storage, route_closure, cart_staging, van_loading, problem_solve, cage_pick, hazmat, office.
+- **Per-stage times** — Override dwell time (minutes) for each zone in the flow.
+
+### Config panel (right sidebar)
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
