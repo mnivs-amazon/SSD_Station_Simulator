@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon SSD Station Simulator V3</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1>🏭 Amazon SSD Station Simulator V3</h1>
+                <div class="mode-toggle">
+                    <button id="simulationMode" class="mode-btn active">Simulation</button>
+                    <button id="editorMode" class="mode-btn">Layout Editor</button>
+                </div>
+            </div>
+            <div class="header-right">
+                <button id="loadTemplate" class="btn btn-secondary">Load Template</button>
+                <button id="saveTemplate" class="btn btn-secondary">Save Template</button>
+                <button id="exportLayout" class="btn btn-primary">Export</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Simulation View -->
+            <div id="simulationView" class="view-container">
+                <div class="simulation-area">
+                    <!-- Control Panel -->
+                    <div class="control-panel">
+                        <div class="controls-section">
+                            <h3>Simulation Controls</h3>
+                            <div class="control-buttons">
+                                <button id="playPause" class="btn btn-primary">▶ Play</button>
+                                <button id="reset" class="btn btn-secondary">🔄 Reset</button>
+                                <button id="step" class="btn btn-secondary">⏭ Step</button>
+                            </div>
+                            <div class="speed-control">
+                                <label for="speedSlider">Speed: <span id="speedValue">1x</span></label>
+                                <input type="range" id="speedSlider" min="0.25" max="4" step="0.25" value="1">
+                            </div>
+                        </div>
+
+                        <div class="metrics-section">
+                            <h3>Real-time Metrics</h3>
+                            <div class="metrics-grid">
+                                <div class="metric">
+                                    <span class="metric-label">Packages/Hour</span>
+                                    <span class="metric-value" id="packagesPerHour">0</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Total Processed</span>
+                                    <span class="metric-value" id="totalProcessed">0</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Active Routes</span>
+                                    <span class="metric-value" id="activeRoutes">0</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Avg Cycle Time</span>
+                                    <span class="metric-value" id="avgCycleTime">0s</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Station Capacity</span>
+                                    <span class="metric-value" id="stationCapacity">0%</span>
+                                </div>
+                                <div class="metric">
+                                    <span class="metric-label">Trucks Waiting</span>
+                                    <span class="metric-value" id="trucksWaiting">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="status-section">
+                            <h3>Zone Status</h3>
+                            <div class="zone-status">
+                                <div class="zone-item">
+                                    <span class="zone-name">Inbound</span>
+                                    <span class="zone-status-indicator" id="inboundStatus">●</span>
+                                    <span class="zone-capacity" id="inboundCapacity">0%</span>
+                                </div>
+                                <div class="zone-item">
+                                    <span class="zone-name">Sort Area</span>
+                                    <span class="zone-status-indicator" id="sortStatus">●</span>
+                                    <span class="zone-capacity" id="sortCapacity">0%</span>
+                                </div>
+                                <div class="zone-item">
+                                    <span class="zone-name">Staging</span>
+                                    <span class="zone-status-indicator" id="stagingStatus">●</span>
+                                    <span class="zone-capacity" id="stagingCapacity">0%</span>
+                                </div>
+                                <div class="zone-item">
+                                    <span class="zone-name">Loading</span>
+                                    <span class="zone-status-indicator" id="loadingStatus">●</span>
+                                    <span class="zone-capacity" id="loadingCapacity">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Station Layout Canvas -->
+                    <div class="canvas-container">
+                        <canvas id="stationCanvas" width="1000" height="700"></canvas>
+                        <div class="canvas-overlay">
+                            <div class="legend">
+                                <h4>Legend</h4>
+                                <div class="legend-item"><span class="legend-color inbound"></span> Inbound Area</div>
+                                <div class="legend-item"><span class="legend-color pick"></span> Pick Zones</div>
+                                <div class="legend-item"><span class="legend-color slam"></span> Slam Stations</div>
+                                <div class="legend-item"><span class="legend-color conveyor"></span> Conveyor Belt</div>
+                                <div class="legend-item"><span class="legend-color induct"></span> Scan/Induct</div>
+                                <div class="legend-item"><span class="legend-color routecart"></span> Route Carts</div>
+                                <div class="legend-item"><span class="legend-color staging"></span> Staging Zones</div>
+                                <div class="legend-item"><span class="legend-color loading"></span> Loading Docks</div>
+                                <div class="legend-item"><span class="legend-color office"></span> Office/Support</div>
+                                <div class="legend-item"><span class="legend-color package"></span> Packages</div>
+                                <div class="legend-item"><span class="legend-color vehicle"></span> Vehicles</div>
+                                <div class="legend-item"><span class="legend-color worker"></span> Associates</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Editor View -->
+            <div id="editorView" class="view-container" style="display: none;">
+                <div class="editor-area">
+                    <!-- Editor Toolbar -->
+                    <div class="editor-toolbar">
+                        <div class="toolbar-section">
+                            <h3>Layout Tools</h3>
+                            <div class="tool-buttons">
+                                <button class="tool-btn active" data-tool="select">🖱 Select</button>
+                                <button class="tool-btn" data-tool="move">✋ Move</button>
+                                <button class="tool-btn" data-tool="resize">🔄 Resize</button>
+                                <button class="tool-btn" data-tool="delete" title="Delete zones (Cmd+-)">🗑️ Delete</button>
+                                <button class="tool-btn" data-tool="add-zone">➕ Add Zone</button>
+                                <button class="tool-btn" id="undoBtn" title="Undo (Cmd+Z)">⤴️ Undo</button>
+                            </div>
+                        </div>
+
+                        <div class="toolbar-section">
+                            <h3>Zone Types</h3>
+                            <div class="zone-buttons">
+                                <button class="zone-btn" data-zone="inbound">📦 Inbound</button>
+                                <button class="zone-btn" data-zone="chilled">❄️ Chilled</button>
+                                <button class="zone-btn" data-zone="frozen">🧊 Frozen</button>
+                                <button class="zone-btn" data-zone="ambient">📦 Ambient</button>
+                                <button class="zone-btn" data-zone="produce">🥬 Produce</button>
+                                <button class="zone-btn" data-zone="chilled_staging">🧊📍 Chilled Stage</button>
+                                <button class="zone-btn" data-zone="frozen_staging">❄️📍 Frozen Stage</button>
+                                <button class="zone-btn" data-zone="ambient_staging">📍 Ambient Stage</button>
+                                <button class="zone-btn" data-zone="cart_storage">🛒 Cart Storage</button>
+                                <button class="zone-btn" data-zone="route_closure">🔄 Route Closure</button>
+                                <button class="zone-btn" data-zone="cart_staging">🛒📍 Cart Staging</button>
+                                <button class="zone-btn" data-zone="van_loading">🚐 Van Loading</button>
+                                <button class="zone-btn" data-zone="problem_solve">❓ Problem Solve</button>
+                                <button class="zone-btn" data-zone="cage_pick">🏗️ Cage Pick</button>
+                                <button class="zone-btn" data-zone="hazmat">⚠️ Hazmat</button>
+                                <button class="zone-btn" data-zone="loading">🚚 Loading</button>
+                                <button class="zone-btn" data-zone="office">🏢 Office</button>
+                            </div>
+                        </div>
+
+                        <div class="toolbar-section">
+                            <h3>Import/Export</h3>
+                            <div class="file-controls">
+                                <input type="file" id="layoutUpload" accept=".json,.jpg,.png,.pdf" style="display: none;">
+                                <button id="uploadLayout" class="btn btn-secondary">📁 Upload Layout</button>
+                                <button id="downloadConfig" class="btn btn-primary">💾 Download Config</button>
+                            </div>
+                        </div>
+
+                        <div class="toolbar-section">
+                            <h3>Properties</h3>
+                            <div class="property-panel" id="propertyPanel">
+                                <p>Select a zone to edit properties</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Editor Canvas -->
+                    <div class="editor-canvas-container">
+                        <canvas id="editorCanvas" width="1000" height="700"></canvas>
+                        <div class="grid-overlay" id="gridOverlay"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Modal -->
+        <div id="configModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Station Configuration</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="config-tabs">
+                        <button class="tab-btn active" data-tab="operational">Operational</button>
+                        <button class="tab-btn" data-tab="layout">Layout</button>
+                        <button class="tab-btn" data-tab="scenarios">Scenarios</button>
+                    </div>
+                    
+                    <div id="operationalTab" class="tab-content">
+                        <div class="config-group">
+                            <label>Package Volume (per hour):</label>
+                            <input type="number" id="packageVolume" value="500" min="100" max="2000">
+                        </div>
+                        <div class="config-group">
+                            <label>Number of Sectors:</label>
+                            <input type="number" id="numSectors" value="15" min="5" max="50">
+                        </div>
+                        <div class="config-group">
+                            <label>Staff Count:</label>
+                            <input type="number" id="staffCount" value="25" min="10" max="100">
+                        </div>
+                        <div class="config-group">
+                            <label>Sort Cycle Time (seconds):</label>
+                            <input type="number" id="sortCycleTime" value="45" min="20" max="180">
+                        </div>
+                    </div>
+
+                    <div id="layoutTab" class="tab-content" style="display: none;">
+                        <div class="config-group">
+                            <label>Station Size (sq ft):</label>
+                            <input type="number" id="stationSize" value="15000" min="5000" max="50000">
+                        </div>
+                        <div class="config-group">
+                            <label>Loading Docks:</label>
+                            <input type="number" id="loadingDocks" value="8" min="2" max="20">
+                        </div>
+                        <div class="config-group">
+                            <label>Sort Positions:</label>
+                            <input type="number" id="sortPositions" value="12" min="4" max="30">
+                        </div>
+                    </div>
+
+                    <div id="scenariosTab" class="tab-content" style="display: none;">
+                        <div class="scenario-list">
+                            <button class="scenario-btn active" data-scenario="normal">Normal Operations</button>
+                            <button class="scenario-btn" data-scenario="peak">Peak Volume</button>
+                            <button class="scenario-btn" data-scenario="low">Low Volume</button>
+                            <button class="scenario-btn" data-scenario="custom">Custom Scenario</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="cancelConfig">Cancel</button>
+                    <button class="btn btn-primary" id="applyConfig">Apply</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="config-manager.js"></script>
+    <script src="layout-editor.js"></script>
+    <script src="file-handler.js"></script>
+    <script src="simulation.js"></script>
+    <script>
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Amazon SSD Station Simulator Loading...');
+            
+            // Initialize components
+            StationSimulator.init();
+            LayoutEditor.init();
+            ConfigManager.init();
+            FileHandler.init();
+            
+            console.log('✅ Simulator Ready!');
+        });
+    </script>
+</body>
+</html>

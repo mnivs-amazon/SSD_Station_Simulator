@@ -1,0 +1,51 @@
+{
+  "name": "Default SSD Station Template",
+  "description": "Standard sub same day delivery station layout with optimal flow configuration",
+  "version": "1.0",
+  "createdAt": 1702025980000,
+  "config": {
+    "packageVolume": 500,
+    "numSectors": 15,
+    "staffCount": 25,
+    "sortCycleTime": 45,
+    "stationSize": 15000,
+    "loadingDocks": 8,
+    "sortPositions": 12
+  },
+  "layout": {
+    "zones": [
+      { "id": "inbound_01", "type": "inbound", "x": 80, "y": 80, "width": 140, "height": 90, "capacity": 100, "current": 0 },
+      { "id": "sort_01", "type": "sort", "x": 280, "y": 80, "width": 140, "height": 90, "capacity": 80, "current": 0 },
+      { "id": "induct_01", "type": "induct", "x": 480, "y": 80, "width": 140, "height": 90, "capacity": 25, "current": 0 },
+      { "id": "route_cart_01", "type": "routecart", "x": 700, "y": 60, "width": 120, "height": 80, "capacity": 25, "current": 0, "routeId": "R001", "status": "filling" },
+      { "id": "route_cart_02", "type": "routecart", "x": 700, "y": 160, "width": 120, "height": 80, "capacity": 25, "current": 0, "routeId": "R002", "status": "filling" },
+      { "id": "staging_01", "type": "staging", "x": 900, "y": 80, "width": 140, "height": 90, "capacity": 60, "current": 0, "routeId": "R001" },
+      { "id": "loading_01", "type": "loading", "x": 1080, "y": 80, "width": 140, "height": 90, "capacity": 40, "current": 0 }
+    ],
+    "conveyors": [
+      { "from": "inbound_01", "to": "sort_01", "points": [{ "x": 220, "y": 125 }, { "x": 280, "y": 125 }] },
+      { "from": "sort_01", "to": "induct_01", "points": [{ "x": 420, "y": 125 }, { "x": 480, "y": 125 }] },
+      { "from": "staging_01", "to": "loading_01", "points": [{ "x": 1040, "y": 125 }, { "x": 1080, "y": 125 }] }
+    ]
+  },
+  "scenarios": {
+    "normal": {
+      "name": "Normal Operations",
+      "packageVolume": 500,
+      "staffCount": 25,
+      "description": "Standard daily operations"
+    },
+    "peak": {
+      "name": "Peak Volume",
+      "packageVolume": 1200,
+      "staffCount": 40,
+      "description": "High-demand periods like holidays"
+    },
+    "low": {
+      "name": "Low Volume",
+      "packageVolume": 200,
+      "staffCount": 15,
+      "description": "Off-peak or early morning operations"
+    }
+  }
+}
