@@ -669,7 +669,7 @@ export function simulateTick(world: WorldState): WorldState {
     const toRemove: string[] = []
     for (const bundle of stg.routeBundles) {
       if (bundle.state !== "staging") continue
-      const dwellTicks = minToTicks(stageTimes.stagingMin)
+      const dwellTicks = minToTicks(config.stageTimes.stagingMin)
       const ticksInStaging = newTick - bundle.enteredStagingAt
       if (ticksInStaging >= dwellTicks) {
         // Move to loading dock
@@ -709,7 +709,7 @@ export function simulateTick(world: WorldState): WorldState {
     const toDispatch: string[] = []
     for (const bundle of dock.routeBundles) {
       if (bundle.state !== "loading" || bundle.enteredLoadingAt === null) continue
-      const dwellTicks = minToTicks(stageTimes.loadingMin)
+      const dwellTicks = minToTicks(config.stageTimes.loadingMin)
       const ticksInLoading = newTick - bundle.enteredLoadingAt
       if (ticksInLoading >= dwellTicks) {
         bundle.state = "dispatched"
