@@ -10,7 +10,9 @@ import type {
   PackageSize,
   ZoneType,
   StageTimes,
+  WorkflowConfig,
 } from "./types"
+import { DEFAULT_WORKFLOW } from "./types"
 import { PACKAGE_SIZE_WEIGHT } from "./types"
 
 // ---- Default Stage Times (in minutes, from the ops clock table) ----
@@ -40,6 +42,7 @@ export const DEFAULT_CONFIG: SimConfig = {
   promiseIgnoreCount: 0,               // ignore first N packages' promise times
   enableConsoleLogging: false,          // log package flow events to console
   stageTimes: DEFAULT_STAGE_TIMES,
+  workflow: DEFAULT_WORKFLOW,
 }
 
 // ---- Console logging helper ----
@@ -61,6 +64,21 @@ export const ZONE_COLORS: Record<ZoneType, { bg: string; border: string; text: s
   route_cart: { bg: "#fee2e2", border: "#ef4444", text: "#991b1b", fill: "#fca5a5" },
   staging:    { bg: "#d1fae5", border: "#10b981", text: "#065f46", fill: "#6ee7b7" },
   loading:    { bg: "#e0e7ff", border: "#6366f1", text: "#3730a3", fill: "#a5b4fc" },
+  chilled:    { bg: "#e0f2fe", border: "#0ea5e9", text: "#0369a1", fill: "#7dd3fc" },
+  frozen:     { bg: "#f0f9ff", border: "#38bdf8", text: "#0c4a6e", fill: "#bae6fd" },
+  ambient:    { bg: "#fefce8", border: "#eab308", text: "#713f12", fill: "#fef08a" },
+  produce:    { bg: "#dcfce7", border: "#22c55e", text: "#14532d", fill: "#86efac" },
+  chilled_staging: { bg: "#cffafe", border: "#06b6d4", text: "#164e63", fill: "#67e8f9" },
+  frozen_staging:  { bg: "#e0f2fe", border: "#0284c7", text: "#075985", fill: "#bae6fd" },
+  ambient_staging: { bg: "#fef9c3", border: "#ca8a04", text: "#854d0e", fill: "#fde047" },
+  cart_storage:    { bg: "#f5f5f4", border: "#78716c", text: "#44403c", fill: "#d6d3d1" },
+  route_closure:  { bg: "#fef2f2", border: "#dc2626", text: "#7f1d1d", fill: "#fecaca" },
+  cart_staging:   { bg: "#fef3c7", border: "#d97706", text: "#78350f", fill: "#fde68a" },
+  van_loading:    { bg: "#ede9fe", border: "#7c3aed", text: "#4c1d95", fill: "#c4b5fd" },
+  problem_solve:  { bg: "#fef3c7", border: "#b45309", text: "#78350f", fill: "#fcd34d" },
+  cage_pick:      { bg: "#ecfdf5", border: "#059669", text: "#065f46", fill: "#6ee7b7" },
+  hazmat:         { bg: "#fef2f2", border: "#b91c1c", text: "#7f1d1d", fill: "#fca5a5" },
+  office:         { bg: "#f8fafc", border: "#64748b", text: "#334155", fill: "#cbd5e1" },
 }
 
 // ---- Package size distribution (weighted random) ----
@@ -84,6 +102,21 @@ function randomPackageSize(): PackageSize {
 // Convert minutes to simulation ticks (1 tick = 1 second)
 function minToTicks(min: number): number {
   return Math.round(min * 60)
+}
+
+// Get stage time in minutes for a zone type (from workflow or StageTimes)
+function getStageTimeMinutes(config: SimConfig, zoneType: ZoneType): number {
+  const custom = config.workflow?.stageTimeByZone?.[zoneType]
+  if (custom != null) return custom
+  const st = config.stageTimes
+  const map: Partial<Record<ZoneType, number>> = {
+    inbound: st.inboundMin,
+    pick: st.pickMin,
+    slam: st.slamMin,
+    conveyor: st.conveyorMin,
+    induct: st.inductMin,
+  }
+  return map[zoneType] ?? 2
 }
 
 // ---- Default Layout ----
@@ -209,7 +242,9 @@ export function createDefaultLayout(config: SimConfig): Zone[] {
 
 // ---- Create Initial World ----
 export function createInitialWorld(zones?: Zone[], config?: SimConfig): WorldState {
-  const cfg: SimConfig = config ? { ...DEFAULT_CONFIG, ...config } : DEFAULT_CONFIG
+  const cfg: SimConfig = config
+    ? { ...DEFAULT_CONFIG, ...config, workflow: { ...DEFAULT_WORKFLOW, ...(config.workflow ?? {}) } }
+    : DEFAULT_CONFIG
   const z = zones || createDefaultLayout(cfg)
 
   const sectors: Sector[] = []
@@ -407,7 +442,7 @@ export function resetPackageCounter() {
 // ---- Simulation Tick ----
 export function simulateTick(world: WorldState): WorldState {
   const { zones, packages, sectors, routes, routeBundles, config, tick, logEntries } = world
-  const { stageTimes } = config
+  const flowSequence = config.workflow?.flowSequence ?? ["inbound", "pick", "slam", "conveyor", "induct"]
 
   const logBuffer: string[] = []
 
@@ -426,18 +461,19 @@ export function simulateTick(world: WorldState): WorldState {
   const newElapsed = world.elapsedSeconds + 1
 
   // ============================================================
-  // 1. SPAWN NEW PACKAGES
+  // 1. SPAWN NEW PACKAGES (at first zone in flow)
   // ============================================================
   const packagesPerTick = config.packageRatePerMinute / 60
   const numToSpawn = Math.random() < (packagesPerTick % 1)
     ? Math.ceil(packagesPerTick)
     : Math.floor(packagesPerTick)
 
-  const inboundZones = findZonesOfType(newZones, "inbound")
+  const entryZoneType = flowSequence[0] ?? "inbound"
+  const entryZones = findZonesOfType(newZones, entryZoneType)
   for (let i = 0; i < numToSpawn; i++) {
-    const inbound = findLeastFullZone(inboundZones)
-    if (inbound) {
-      const pos = randomInZone(inbound)
+    const entry = findLeastFullZone(entryZones)
+    if (entry) {
+      const pos = randomInZone(entry)
       const size = randomPackageSize()
       // Promise time: randomly T+2hrs to T+5hrs from now
       const promiseMinutes = 120 + Math.random() * config.promiseWindowMinutes
@@ -445,11 +481,11 @@ export function simulateTick(world: WorldState): WorldState {
 
       const pkg: Package = {
         id: nextPackageId(size),
-        state: "inbound",
+        state: entryZoneType,
         size,
         sectorId: null,
         routeId: null,
-        zoneId: inbound.id,
+        zoneId: entry.id,
         createdAt: newTick,
         promiseTime,
         stateEnteredAt: newTick,
@@ -460,66 +496,39 @@ export function simulateTick(world: WorldState): WorldState {
         targetY: pos.y,
       }
       newPackages.push(pkg)
-      inbound.packages.push(pkg.id)
-      logEvent(config, newTick, `Package ${pkg.id} created at Inbound`)
+      entry.packages.push(pkg.id)
+      logEvent(config, newTick, `Package ${pkg.id} created at ${entry.label}`)
     }
   }
 
   // ============================================================
-  // 2. PROCESS PACKAGES through top-row stages with per-stage times
-  //    Flow: inbound -> pick -> slam -> conveyor -> induct -> route_cart
+  // 2. PROCESS PACKAGES through flow sequence -> route_cart
   // ============================================================
   for (const pkg of newPackages) {
     if (pkg.state === "delivered" || pkg.state === "bundled") continue
 
     const ticksInState = newTick - pkg.stateEnteredAt
 
-    // --- INBOUND -> PICK ---
-    if (pkg.state === "inbound" && ticksInState >= minToTicks(stageTimes.inboundMin)) {
-      const pickZones = findZonesOfType(newZones, "pick")
-      const target = findLeastFullZone(pickZones)
-      if (target) {
-        movePackage(pkg, target, newZones, newTick)
-        pkg.state = "pick"
-        logEvent(config, newTick, `Package ${pkg.id}: inbound → pick (${target.label})`, logBuffer)
+    // --- Linear flow: flowSequence[i] -> flowSequence[i+1] ---
+    const flowIdx = flowSequence.indexOf(pkg.state as ZoneType)
+    if (flowIdx >= 0 && flowIdx < flowSequence.length - 1) {
+      const stageMin = getStageTimeMinutes(config, pkg.state as ZoneType)
+      const nextType = flowSequence[flowIdx + 1]
+      if (ticksInState >= minToTicks(stageMin)) {
+        const nextZones = findZonesOfType(newZones, nextType)
+        const target = findLeastFullZone(nextZones)
+        if (target) {
+          movePackage(pkg, target, newZones, newTick)
+          pkg.state = nextType
+          logEvent(config, newTick, `Package ${pkg.id}: ${flowSequence[flowIdx]} → ${nextType} (${target.label})`, logBuffer)
+        }
       }
+      continue
     }
 
-    // --- PICK -> SLAM ---
-    else if (pkg.state === "pick" && ticksInState >= minToTicks(stageTimes.pickMin)) {
-      const slamZones = findZonesOfType(newZones, "slam")
-      const target = findLeastFullZone(slamZones)
-      if (target) {
-        movePackage(pkg, target, newZones, newTick)
-        pkg.state = "slam"
-        logEvent(config, newTick, `Package ${pkg.id}: pick → slam (${target.label})`, logBuffer)
-      }
-    }
-
-    // --- SLAM -> CONVEYOR ---
-    else if (pkg.state === "slam" && ticksInState >= minToTicks(stageTimes.slamMin)) {
-      const conveyorZones = findZonesOfType(newZones, "conveyor")
-      const target = findLeastFullZone(conveyorZones)
-      if (target) {
-        movePackage(pkg, target, newZones, newTick)
-        pkg.state = "conveyor"
-        logEvent(config, newTick, `Package ${pkg.id}: slam → conveyor (${target.label})`, logBuffer)
-      }
-    }
-
-    // --- CONVEYOR -> INDUCT ---
-    else if (pkg.state === "conveyor" && ticksInState >= minToTicks(stageTimes.conveyorMin)) {
-      const inductZones = findZonesOfType(newZones, "induct")
-      const target = findLeastFullZone(inductZones)
-      if (target) {
-        movePackage(pkg, target, newZones, newTick)
-        pkg.state = "induct"
-        logEvent(config, newTick, `Package ${pkg.id}: conveyor → induct (${target.label})`, logBuffer)
-      }
-    }
-
-    // --- INDUCT -> ROUTE CART (random assignment) ---
-    else if (pkg.state === "induct" && ticksInState >= minToTicks(stageTimes.inductMin)) {
+    // --- Last flow stage -> ROUTE CART (random assignment) ---
+    const lastFlowType = flowSequence[flowSequence.length - 1]
+    if (pkg.state === lastFlowType && ticksInState >= minToTicks(getStageTimeMinutes(config, lastFlowType))) {
       const cartZones = findZonesOfType(newZones, "route_cart")
         .filter(z => {
           // Check weighted capacity

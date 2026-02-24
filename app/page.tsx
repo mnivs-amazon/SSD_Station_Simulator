@@ -9,8 +9,9 @@ import { ConfigPanel } from "@/components/config-panel"
 import { EditorToolbar } from "@/components/editor-toolbar"
 import { WikiPanel } from "@/components/wiki-panel"
 import { LogsPanel } from "@/components/logs-panel"
+import { WorkflowPanel } from "@/components/workflow-panel"
 
-type TabId = "simulator" | "wiki" | "logs"
+type TabId = "simulator" | "wiki" | "workflow" | "logs"
 
 export default function SSDStationSimulator() {
   const sim = useSimulation()
@@ -49,6 +50,17 @@ export default function SSDStationSimulator() {
             </button>
             <button
               type="button"
+              onClick={() => setActiveTab("workflow")}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                activeTab === "workflow"
+                  ? "bg-primary-foreground text-primary"
+                  : "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
+              }`}
+            >
+              Workflow
+            </button>
+            <button
+              type="button"
               onClick={() => setActiveTab("logs")}
               className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
                 activeTab === "logs"
@@ -80,6 +92,13 @@ export default function SSDStationSimulator() {
         <div className="flex-1 overflow-hidden">
           <WikiPanel />
         </div>
+      ) : activeTab === "workflow" ? (
+        <div className="flex-1 overflow-hidden">
+          <WorkflowPanel
+            workflow={sim.world.config.workflow}
+            onUpdateWorkflow={sim.updateWorkflow}
+          />
+        </div>
       ) : activeTab === "logs" ? (
         <div className="flex-1 overflow-hidden">
           <LogsPanel
@@ -108,6 +127,7 @@ export default function SSDStationSimulator() {
           {sim.mode === "edit" && (
             <EditorToolbar
               editorState={sim.editorState}
+              enabledZoneTypes={sim.world.config.workflow.enabledZoneTypes}
               onSetTool={sim.setEditorTool}
               onDeleteZone={sim.deleteZone}
               onSetAddType={sim.setAddZoneType}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useRef, useEffect } from "react"
-import type { WorldState, SimSpeed, AppMode, EditorState, ZoneType, StageTimes } from "@/lib/simulation/types"
+import type { WorldState, SimSpeed, AppMode, EditorState, ZoneType, StageTimes, WorkflowConfig } from "@/lib/simulation/types"
 import {
   createInitialWorld,
   createDefaultLayout,
@@ -156,6 +156,16 @@ export function useSimulation() {
     }))
   }, [])
 
+  const updateWorkflow = useCallback((updates: Partial<WorkflowConfig>) => {
+    setWorld((prev) => ({
+      ...prev,
+      config: {
+        ...prev.config,
+        workflow: { ...prev.config.workflow, ...updates },
+      },
+    }))
+  }, [])
+
   // Template I/O
   const exportTemplate = useCallback(() => {
     const template = {
@@ -207,6 +217,7 @@ export function useSimulation() {
     resizeZone,
     updateConfig,
     updateStageTimes,
+    updateWorkflow,
     exportTemplate,
     importTemplate,
   }

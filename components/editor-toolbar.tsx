@@ -10,27 +10,44 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
+const ZONE_LABELS: Record<ZoneType, string> = {
+  inbound: "Inbound",
+  pick: "Pick",
+  slam: "Slam",
+  conveyor: "Conveyor",
+  induct: "Induct",
+  route_cart: "Route Cart",
+  staging: "Staging",
+  loading: "Loading",
+  chilled: "Chilled",
+  frozen: "Frozen",
+  ambient: "Ambient",
+  produce: "Produce",
+  chilled_staging: "Chilled Staging",
+  frozen_staging: "Frozen Staging",
+  ambient_staging: "Ambient Staging",
+  cart_storage: "Cart Storage",
+  route_closure: "Route Closure",
+  cart_staging: "Cart Staging",
+  van_loading: "Van Loading",
+  problem_solve: "Problem Solve",
+  cage_pick: "Cage Pick",
+  hazmat: "Hazmat",
+  office: "Office",
+}
+
 interface EditorToolbarProps {
   editorState: EditorState
+  enabledZoneTypes: ZoneType[]
   onSetTool: (tool: EditorState["tool"]) => void
   onDeleteZone: (zoneId: string) => void
   onSetAddType: (type: ZoneType) => void
   onToggleGrid: () => void
 }
 
-const ZONE_TYPES: { type: ZoneType; label: string }[] = [
-  { type: "inbound", label: "Inbound" },
-  { type: "pick", label: "Pick" },
-  { type: "slam", label: "Slam" },
-  { type: "conveyor", label: "Conveyor" },
-  { type: "induct", label: "Induct" },
-  { type: "route_cart", label: "Route Cart" },
-  { type: "staging", label: "Staging" },
-  { type: "loading", label: "Loading" },
-]
-
 export function EditorToolbar({
   editorState,
+  enabledZoneTypes,
   onSetTool,
   onDeleteZone,
   onSetAddType,
@@ -104,7 +121,7 @@ export function EditorToolbar({
           <div className="h-5 w-px bg-border" />
           <span className="text-xs text-muted-foreground">Zone Type:</span>
           <div className="flex flex-wrap gap-1">
-            {ZONE_TYPES.map(({ type, label }) => (
+            {enabledZoneTypes.map((type) => (
               <Button
                 key={type}
                 variant={editorState.addZoneType === type ? "default" : "outline"}
@@ -112,7 +129,7 @@ export function EditorToolbar({
                 className="h-6 px-2 text-[11px]"
                 onClick={() => onSetAddType(type)}
               >
-                {label}
+                {ZONE_LABELS[type]}
               </Button>
             ))}
           </div>

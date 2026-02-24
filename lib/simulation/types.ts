@@ -1,4 +1,4 @@
-// ---- Zone Types ----
+// ---- Zone Types (V5 + V3 extended) ----
 export type ZoneType =
   | "inbound"
   | "pick"
@@ -8,6 +8,22 @@ export type ZoneType =
   | "route_cart"
   | "staging"
   | "loading"
+  // V3 extended types
+  | "chilled"
+  | "frozen"
+  | "ambient"
+  | "produce"
+  | "chilled_staging"
+  | "frozen_staging"
+  | "ambient_staging"
+  | "cart_storage"
+  | "route_closure"
+  | "cart_staging"
+  | "van_loading"
+  | "problem_solve"
+  | "cage_pick"
+  | "hazmat"
+  | "office"
 
 export interface Zone {
   id: string
@@ -62,15 +78,7 @@ export interface RouteBundle {
 }
 
 // ---- Package Types ----
-export type PackageState =
-  | "inbound"
-  | "pick"
-  | "slam"
-  | "conveyor"
-  | "induct"
-  | "route_cart"
-  | "bundled"    // consumed into a route bundle
-  | "delivered"
+export type PackageState = ZoneType | "bundled" | "delivered"
 
 export interface Package {
   id: string               // e.g. S000001, M000002, L000003 (size prefix + globally unique number)
@@ -117,6 +125,26 @@ export interface StageTimes {
   loadingMin: number        // Vehicle Loading: 1
 }
 
+// ---- Workflow Config (defines zone types and package flow) ----
+export interface WorkflowConfig {
+  /** Ordered flow sequence: packages move through these zones before route_cart */
+  flowSequence: ZoneType[]
+  /** Zone types available in the editor (enabled = can add to layout) */
+  enabledZoneTypes: ZoneType[]
+  /** Per-zone stage time in minutes (overrides StageTimes when set) */
+  stageTimeByZone: Record<string, number>
+}
+
+export const DEFAULT_WORKFLOW: WorkflowConfig = {
+  flowSequence: ["inbound", "pick", "slam", "conveyor", "induct"],
+  enabledZoneTypes: [
+    "inbound", "pick", "slam", "conveyor", "induct", "route_cart", "staging", "loading",
+    "chilled", "frozen", "ambient", "produce", "chilled_staging", "frozen_staging", "ambient_staging",
+    "cart_storage", "route_closure", "cart_staging", "van_loading", "problem_solve", "cage_pick", "hazmat", "office",
+  ],
+  stageTimeByZone: {},
+}
+
 // ---- Simulation Config ----
 export interface SimConfig {
   packageRatePerMinute: number
@@ -132,6 +160,7 @@ export interface SimConfig {
   promiseIgnoreCount: number              // ignore first N packages' promise times; use (N+1)th earliest
   enableConsoleLogging: boolean           // log package flow events to console for debugging
   stageTimes: StageTimes
+  workflow: WorkflowConfig
 }
 
 // ---- Per-zone-type capacity summary ----
