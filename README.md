@@ -11,20 +11,21 @@ The simulator models the full lifecycle of packages through a delivery station:
 3. **Slam** → Scan, Label, Apply, Manifest
 4. **Conveyor** → Transport from Slam to Induct
 5. **Induct** → Packages are scanned and stowed into the sort system
-6. **Route Cart** → Packages accumulate by weighted capacity; carts flush to create route bundles
-7. **Staging** → Route bundles wait before loading
-8. **Loading** → Bundles are loaded onto delivery vehicles and dispatched
+6. **Route Cart** → Packages accumulate by weighted capacity (wt); when full, the Route is closed and moves to staging
+7. **Staging** → Closed Routes wait before loading
+8. **Loading** → Routes are loaded onto delivery vehicles and dispatched
 
 ## Features
 
-- **Visual simulation** — Canvas-based visualization of zones, packages, and route bundles
-- **Configurable parameters** — Package rate, sectors, staging zones, cart capacity, flush thresholds
+- **Visual simulation** — Canvas-based visualization of zones, packages, and routes
+- **Configurable parameters** — Package rate, sectors, staging zones, cart capacity (wt), flush thresholds
 - **Per-stage timing** — Adjustable dwell times for each stage (inbound, pick, slam, conveyor, induct, staging, loading)
 - **Editor mode** — Add, move, resize, and delete zones to design custom layouts
 - **Template I/O** — Export and import station layouts as JSON
 - **Metrics panel** — Throughput, cycle time, zone utilization, packages per stage
 - **Wiki** — Built-in documentation for zones and concepts
-- **Speed control** — Run simulation at 0.5× to 20× speed
+- **Logs tab** — Event log for package flow (enable Debug Logging in Config)
+- **Speed control** — Slider from 4× to 100× for fast simulation runs
 
 ## Tech Stack
 
@@ -110,9 +111,10 @@ Or with pnpm or yarn: `pnpm build` / `pnpm start` or `yarn build` / `yarn start`
 │   └── globals.css     # Global styles
 ├── components/
 │   ├── station-canvas.tsx   # Canvas visualization
-│   ├── control-bar.tsx      # Play/pause, speed, mode
+│   ├── control-bar.tsx      # Play/pause, speed slider, mode
 │   ├── config-panel.tsx     # Configuration sidebar
 │   ├── metrics-panel.tsx   # Live metrics
+│   ├── logs-panel.tsx      # Event log (package & route flow)
 │   ├── editor-toolbar.tsx  # Edit-mode tools
 │   ├── wiki-panel.tsx      # Documentation
 │   └── ui/                 # Reusable UI components
@@ -135,11 +137,17 @@ Key parameters (configurable in the right panel):
 | Package Rate | Packages per minute | 10 |
 | Sectors | Number of route carts | 45 |
 | Staging Zones | Number of staging areas | 15 |
-| Cart Capacity | Weighted capacity per cart | 50 |
+| Cart Capacity | Weighted capacity per cart (wt: S=1, M=2, L=3, X=4) | 50 |
 | Flush Threshold | Min weighted count to flush cart | 45 |
-| Staging Max Routes | Max route bundles per staging zone | 3 |
+| Staging Max Routes | Max routes per staging zone | 3 |
+| Debug Logging | Log package/route events to Logs tab and console | Off |
 
 Stage times (in minutes) control dwell at each stage. See the Wiki tab for detailed documentation.
+
+## IDs
+
+- **Package ID** — Size prefix (S/M/L/X) + unique number, e.g. S000001, M000002
+- **Route ID** — Unique per route, e.g. R000001, R000002. Created when packages are assigned; used throughout staging, loading, and dispatch.
 
 ## License
 
