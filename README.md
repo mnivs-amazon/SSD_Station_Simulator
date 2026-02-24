@@ -38,6 +38,26 @@ The simulator models the full lifecycle of packages through a delivery station:
 
 ## Getting Started
 
+### Run from GitHub
+
+1. **Clone the repo**
+   ```bash
+   git clone https://github.com/mnivs-amazon/SSD_Station_Simulator.git
+   cd SSD_Station_Simulator
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Start the simulator**
+   ```bash
+   npm run dev
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
 ### Prerequisites
 
 - Node.js 18+ (includes npm)
