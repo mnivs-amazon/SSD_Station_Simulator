@@ -280,7 +280,7 @@ export function StationCanvas({
         ctx.font = "bold 7px 'Geist Mono', monospace"
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
-        ctx.fillText(bundle.id, bundle.visualX, bundle.visualY - 5)
+        ctx.fillText(bundle.routeId, bundle.visualX, bundle.visualY - 5)
 
         // Package count (bottom line)
         ctx.fillStyle = "#374151"

@@ -8,8 +8,9 @@ import { MetricsPanel } from "@/components/metrics-panel"
 import { ConfigPanel } from "@/components/config-panel"
 import { EditorToolbar } from "@/components/editor-toolbar"
 import { WikiPanel } from "@/components/wiki-panel"
+import { LogsPanel } from "@/components/logs-panel"
 
-type TabId = "simulator" | "wiki"
+type TabId = "simulator" | "wiki" | "logs"
 
 export default function SSDStationSimulator() {
   const sim = useSimulation()
@@ -46,6 +47,17 @@ export default function SSDStationSimulator() {
             >
               Wiki
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("logs")}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                activeTab === "logs"
+                  ? "bg-primary-foreground text-primary"
+                  : "bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
+              }`}
+            >
+              Logs
+            </button>
           </nav>
         </div>
         <div className="flex items-center gap-2">
@@ -67,6 +79,13 @@ export default function SSDStationSimulator() {
       {activeTab === "wiki" ? (
         <div className="flex-1 overflow-hidden">
           <WikiPanel />
+        </div>
+      ) : activeTab === "logs" ? (
+        <div className="flex-1 overflow-hidden">
+          <LogsPanel
+            logEntries={sim.world.logEntries}
+            isLoggingEnabled={sim.world.config.enableConsoleLogging}
+          />
         </div>
       ) : (
         <>

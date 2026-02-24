@@ -6,11 +6,11 @@ import {
   Pause,
   SkipForward,
   RotateCcw,
-  Gauge,
   Pencil,
   MonitorPlay,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Slider } from "@/components/ui/slider"
 
 interface ControlBarProps {
   isRunning: boolean
@@ -26,12 +26,17 @@ interface ControlBarProps {
   onToggleMode: () => void
 }
 
-const SPEEDS: SimSpeed[] = [0.5, 1, 2, 4, 8, 12, 16, 20]
+const SPEED_MIN = 4
+const SPEED_MAX = 100
 
 function formatTime(seconds: number): string {
-  const h = Math.floor(seconds / 3600)
+  const d = Math.floor(seconds / 86400)
+  const h = Math.floor((seconds % 86400) / 3600)
   const m = Math.floor((seconds % 3600) / 60)
   const s = seconds % 60
+  if (d > 0) {
+    return `${d}d ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+  }
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
 }
 
@@ -122,24 +127,18 @@ export function ControlBar({
 
       <div className="h-5 w-px bg-border" />
 
-      {/* Speed selector */}
-      <div className="flex items-center gap-1.5">
-        <span className="text-xs text-muted-foreground">Speed:</span>
-        <div className="flex items-center rounded-md border border-border overflow-hidden">
-          {SPEEDS.map((s) => (
-            <button
-              key={s}
-              className={`px-2.5 py-1 text-xs font-medium transition-colors ${
-                speed === s
-                  ? "bg-foreground text-background"
-                  : "bg-card text-muted-foreground hover:bg-muted"
-              }`}
-              onClick={() => onChangeSpeed(s)}
-            >
-              {s}x
-            </button>
-          ))}
-        </div>
+      {/* Speed slider */}
+      <div className="flex items-center gap-3 min-w-[180px]">
+        <span className="text-xs text-muted-foreground shrink-0">Speed:</span>
+        <Slider
+          value={[speed]}
+          min={SPEED_MIN}
+          max={SPEED_MAX}
+          step={1}
+          onValueChange={([v]) => onChangeSpeed(v)}
+          className="flex-1"
+        />
+        <span className="font-mono text-xs font-semibold text-foreground w-10 shrink-0">{speed}x</span>
       </div>
 
       <div className="h-5 w-px bg-border" />

@@ -44,9 +44,9 @@ export const PACKAGE_SIZE_CONFIG: Record<PackageSize, { weight: number; cuft: nu
   xlarge: { weight: 6, cuft: 2.0, label: "XL" },
 }
 
-// ---- Route Bundle (condensed route moving through staging/loading) ----
+// ---- Route Bundle (closed route moving through staging/loading — id = routeId) ----
 export interface RouteBundle {
-  id: string
+  id: string   // same as routeId — route is the sole identifier
   routeId: string
   sectorId: string
   packageCount: number
@@ -73,7 +73,7 @@ export type PackageState =
   | "delivered"
 
 export interface Package {
-  id: string               // e.g. S1, M12, L3, XL5
+  id: string               // e.g. S000001, M000002, L000003 (size prefix + globally unique number)
   state: PackageState
   size: PackageSize
   sectorId: string | null
@@ -130,6 +130,7 @@ export interface SimConfig {
   enableRouteClosurePressure: boolean     // if true, routes flush when approaching promise time - buffer
   enableCapacityFlush: boolean            // if true, routes flush when capacity threshold met
   promiseIgnoreCount: number              // ignore first N packages' promise times; use (N+1)th earliest
+  enableConsoleLogging: boolean           // log package flow events to console for debugging
   stageTimes: StageTimes
 }
 
@@ -168,10 +169,11 @@ export interface WorldState {
   tick: number
   elapsedSeconds: number
   metrics: Metrics
+  logEntries: string[]  // in-app log buffer when enableConsoleLogging is on (capped)
 }
 
 // ---- Simulation Speed ----
-export type SimSpeed = 0.5 | 1 | 2 | 4 | 8 | 12 | 16 | 20
+export type SimSpeed = number  // 4 to 100 (slider)
 
 // ---- Editor Types ----
 export type EditorTool = "select" | "move" | "resize" | "add" | "delete"

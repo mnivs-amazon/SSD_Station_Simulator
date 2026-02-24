@@ -128,6 +128,20 @@ export function ConfigPanel({
             <Check className="h-3 w-3" />
           </button>
         </div>
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-muted-foreground" title="Log package flow events to browser console">Debug Logging</Label>
+          <button
+            type="button"
+            onClick={() => onUpdateConfig({ enableConsoleLogging: !config.enableConsoleLogging })}
+            className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${
+              config.enableConsoleLogging
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card text-transparent"
+            }`}
+          >
+            <Check className="h-3 w-3" />
+          </button>
+        </div>
         {config.enableRouteClosurePressure && (
           <>
             <ConfigSlider

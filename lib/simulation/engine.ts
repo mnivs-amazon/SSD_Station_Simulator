@@ -38,7 +38,17 @@ export const DEFAULT_CONFIG: SimConfig = {
   enableRouteClosurePressure: true,     // route closure on promise time - buffer
   enableCapacityFlush: true,            // capacity threshold triggers flush
   promiseIgnoreCount: 0,               // ignore first N packages' promise times
+  enableConsoleLogging: false,          // log package flow events to console
   stageTimes: DEFAULT_STAGE_TIMES,
+}
+
+// ---- Console logging helper ----
+function logEvent(config: SimConfig, tick: number, msg: string, logBuffer?: string[]) {
+  if (config.enableConsoleLogging) {
+    const entry = `[SSD T+${tick}s] ${msg}`
+    console.log(entry)
+    if (logBuffer) logBuffer.push(entry)
+  }
 }
 
 // ---- Zone Colors (light theme) ----
@@ -199,7 +209,7 @@ export function createDefaultLayout(config: SimConfig): Zone[] {
 
 // ---- Create Initial World ----
 export function createInitialWorld(zones?: Zone[], config?: SimConfig): WorldState {
-  const cfg = config || DEFAULT_CONFIG
+  const cfg: SimConfig = config ? { ...DEFAULT_CONFIG, ...config } : DEFAULT_CONFIG
   const z = zones || createDefaultLayout(cfg)
 
   const sectors: Sector[] = []
@@ -207,12 +217,20 @@ export function createInitialWorld(zones?: Zone[], config?: SimConfig): WorldSta
 
   for (let i = 1; i <= cfg.numSectors; i++) {
     const sectorId = `S${String(i).padStart(2, "0")}`
-    const routeId = `${sectorId}R01`
+    const routeId = nextRouteId(sectorId)
     sectors.push({ id: sectorId, activeRouteId: routeId })
     routes.push({
       id: routeId, sectorId, status: "open",
       packageCount: 0, weightedCount: 0, earliestPromiseTime: null,
     })
+  }
+
+  // Assign route IDs to route cart zones (match by sector)
+  for (const zone of z) {
+    if (zone.type === "route_cart" && zone.sectorId) {
+      const route = routes.find((r) => r.sectorId === zone.sectorId)
+      if (route) zone.routeId = route.id
+    }
   }
 
   return {
@@ -225,6 +243,7 @@ export function createInitialWorld(zones?: Zone[], config?: SimConfig): WorldSta
     tick: 0,
     elapsedSeconds: 0,
     metrics: computeMetrics([], z, routes, [], 0),
+    logEntries: [],
   }
 }
 
@@ -360,42 +379,37 @@ function randomInZone(zone: Zone): { x: number; y: number } {
   }
 }
 
-const sizeCounters: Record<PackageSize, number> = {
-  small: 0,
-  medium: 0,
-  large: 0,
-  xlarge: 0,
-}
+// Global counters that never reset — ensure package and route IDs are never repeated
+let pkgGlobalCounter = 0
+let routeGlobalCounter = 0
 
 const SIZE_PREFIX: Record<PackageSize, string> = {
   small: "S",
   medium: "M",
   large: "L",
-  xlarge: "XL",
+  xlarge: "X",
 }
 
 function nextPackageId(size: PackageSize): string {
-  sizeCounters[size]++
-  return `${SIZE_PREFIX[size]}${sizeCounters[size]}`
+  pkgGlobalCounter++
+  return `${SIZE_PREFIX[size]}${String(pkgGlobalCounter).padStart(6, "0")}`
 }
 
-let bundleCounter = 0
-function nextBundleId(): string {
-  return `BDL${String(++bundleCounter).padStart(4, "0")}`
+function nextRouteId(sectorId: string): string {
+  routeGlobalCounter++
+  return `R${String(routeGlobalCounter).padStart(6, "0")}`
 }
 
 export function resetPackageCounter() {
-  sizeCounters.small = 0
-  sizeCounters.medium = 0
-  sizeCounters.large = 0
-  sizeCounters.xlarge = 0
-  bundleCounter = 0
+  // pkgGlobalCounter and routeGlobalCounter are intentionally NOT reset — IDs must never repeat
 }
 
 // ---- Simulation Tick ----
 export function simulateTick(world: WorldState): WorldState {
-  const { zones, packages, sectors, routes, routeBundles, config, tick } = world
+  const { zones, packages, sectors, routes, routeBundles, config, tick, logEntries } = world
   const { stageTimes } = config
+
+  const logBuffer: string[] = []
 
   // Deep clone
   const newZones = zones.map((z) => ({
@@ -447,6 +461,7 @@ export function simulateTick(world: WorldState): WorldState {
       }
       newPackages.push(pkg)
       inbound.packages.push(pkg.id)
+      logEvent(config, newTick, `Package ${pkg.id} created at Inbound`)
     }
   }
 
@@ -466,6 +481,7 @@ export function simulateTick(world: WorldState): WorldState {
       if (target) {
         movePackage(pkg, target, newZones, newTick)
         pkg.state = "pick"
+        logEvent(config, newTick, `Package ${pkg.id}: inbound → pick (${target.label})`, logBuffer)
       }
     }
 
@@ -476,6 +492,7 @@ export function simulateTick(world: WorldState): WorldState {
       if (target) {
         movePackage(pkg, target, newZones, newTick)
         pkg.state = "slam"
+        logEvent(config, newTick, `Package ${pkg.id}: pick → slam (${target.label})`, logBuffer)
       }
     }
 
@@ -486,6 +503,7 @@ export function simulateTick(world: WorldState): WorldState {
       if (target) {
         movePackage(pkg, target, newZones, newTick)
         pkg.state = "conveyor"
+        logEvent(config, newTick, `Package ${pkg.id}: slam → conveyor (${target.label})`, logBuffer)
       }
     }
 
@@ -496,6 +514,7 @@ export function simulateTick(world: WorldState): WorldState {
       if (target) {
         movePackage(pkg, target, newZones, newTick)
         pkg.state = "induct"
+        logEvent(config, newTick, `Package ${pkg.id}: conveyor → induct (${target.label})`, logBuffer)
       }
     }
 
@@ -526,6 +545,7 @@ export function simulateTick(world: WorldState): WorldState {
             if (route.earliestPromiseTime === null || pkg.promiseTime < route.earliestPromiseTime) {
               route.earliestPromiseTime = pkg.promiseTime
             }
+            logEvent(config, newTick, `Package ${pkg.id} assigned to route cart ${randomCart.label} (RouteID ${route.id}) — weighted ${route.weightedCount}/${config.cartWeightedCapacity}`, logBuffer)
           }
         }
       }
@@ -576,10 +596,10 @@ export function simulateTick(world: WorldState): WorldState {
       // Find staging with room
       const staging = findStagingWithRoom(newZones)
       if (staging) {
-        // Create route bundle
+        // Create route bundle (closed route moving through staging/loading — identified by routeId)
         const bundlePos = randomInZone(staging)
         const bundle: RouteBundle = {
-          id: nextBundleId(),
+          id: route.id,
           routeId: route.id,
           sectorId: cart.sectorId || "",
           packageCount: route.packageCount,
@@ -593,6 +613,8 @@ export function simulateTick(world: WorldState): WorldState {
           targetY: bundlePos.y,
         }
         newBundles.push(bundle)
+
+        logEvent(config, newTick, `Route cart ${cart.label} flushed to staging: ${bundle.packageCount} packages, ${bundle.weightedCount} wt (${bundle.id})`, logBuffer)
 
         // Add bundle to staging zone
         if (!staging.routeBundles) staging.routeBundles = []
@@ -615,8 +637,7 @@ export function simulateTick(world: WorldState): WorldState {
         if (cart.sectorId) {
           const sector = newSectors.find(s => s.id === cart.sectorId)
           if (sector) {
-            const routeNum = newRoutes.filter(r => r.sectorId === sector.id).length + 1
-            const newRouteId = `${sector.id}R${String(routeNum).padStart(2, "0")}`
+            const newRouteId = nextRouteId(sector.id)
             newRoutes.push({
               id: newRouteId, sectorId: sector.id, status: "open",
               packageCount: 0, weightedCount: 0, earliestPromiseTime: null,
@@ -653,6 +674,7 @@ export function simulateTick(world: WorldState): WorldState {
           if (!dock.routeBundles) dock.routeBundles = []
           dock.routeBundles.push(bundle)
           toRemove.push(bundle.id)
+          logEvent(config, newTick, `Route ${bundle.routeId} moved to loading (${dock.label})`, logBuffer)
 
           // Update the global bundles array too
           const globalBundle = newBundles.find(b => b.id === bundle.id)
@@ -692,6 +714,8 @@ export function simulateTick(world: WorldState): WorldState {
           }
         }
 
+        logEvent(config, newTick, `Route ${bundle.routeId} dispatched (${bundle.packageCount} packages)`, logBuffer)
+
         // Update global bundle
         const globalBundle = newBundles.find(b => b.id === bundle.id)
         if (globalBundle) globalBundle.state = "dispatched"
@@ -722,6 +746,8 @@ export function simulateTick(world: WorldState): WorldState {
   // ============================================================
   const newMetrics = computeMetrics(newPackages, newZones, newRoutes, newBundles, newElapsed)
 
+  const newLogEntries = [...(logEntries || []), ...logBuffer]
+
   return {
     zones: newZones,
     packages: newPackages,
@@ -732,6 +758,7 @@ export function simulateTick(world: WorldState): WorldState {
     tick: newTick,
     elapsedSeconds: newElapsed,
     metrics: newMetrics,
+    logEntries: newLogEntries,
   }
 }
 

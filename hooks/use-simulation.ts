@@ -12,7 +12,7 @@ import {
 export function useSimulation() {
   const [world, setWorld] = useState<WorldState>(() => createInitialWorld())
   const [isRunning, setIsRunning] = useState(false)
-  const [speed, setSpeed] = useState<SimSpeed>(1)
+  const [speed, setSpeed] = useState<SimSpeed>(4)
   const [mode, setMode] = useState<AppMode>("simulate")
   const [editorState, setEditorState] = useState<EditorState>({
     tool: "select",

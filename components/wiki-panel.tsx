@@ -45,19 +45,19 @@ const WIKI_SECTIONS: WikiSection[] = [
       {
         term: "Route Cart",
         definition:
-          "Physical cart assigned to a sector/route. Packages accumulate here by weighted capacity. A cart flushes (creates a Route Bundle) when the flush threshold is reached or route closure pressure triggers.",
+          "Physical cart assigned to a sector/route. Packages accumulate here by weighted capacity. When full, the Route is closed and moves to staging.",
         formula: "Capacity = cartWeightedCapacity (default 50 wt); Flush at = cartFlushThreshold (default 45 wt)",
       },
       {
         term: "Staging",
         definition:
-          "Area where completed Route Bundles wait before being assigned to a loading dock. Each staging zone has a max number of route bundles it can hold.",
-        formula: "Max bundles = stagingMaxRoutes (default 3); Dwell = stagingMin (default 4 min)",
+          "Area where closed Routes wait before moving to a loading dock. Each staging zone holds a max number of routes.",
+        formula: "Max routes = stagingMaxRoutes (default 3); Dwell = stagingMin (default 4 min)",
       },
       {
         term: "Loading (Dock)",
         definition:
-          "Loading docks where Route Bundles are loaded onto delivery vehicles. After loading dwell time, bundles are dispatched and packages are marked as delivered.",
+          "Loading docks where Routes are loaded onto delivery vehicles. After loading dwell time, the route is dispatched and packages are marked as delivered.",
         formula: "Dwell = loadingMin (default 1 min)",
       },
     ],
@@ -68,7 +68,7 @@ const WIKI_SECTIONS: WikiSection[] = [
       {
         term: "Package ID",
         definition:
-          "Sequential identifier prefixed by size: S1, S2, S3... (small), M1, M2... (medium), L1, L2... (large), XL1, XL2... (xlarge). Each size has its own counter.",
+          "Globally unique identifier with size prefix: S (small), M (medium), L (large), X (xlarge) followed by a number (e.g. S000001, M000002). The number never repeats.",
       },
       {
         term: "Package Size",
@@ -90,7 +90,7 @@ const WIKI_SECTIONS: WikiSection[] = [
     ],
   },
   {
-    title: "Route & Bundle Attributes",
+    title: "Route Attributes",
     items: [
       {
         term: "Sector",
@@ -101,7 +101,7 @@ const WIKI_SECTIONS: WikiSection[] = [
         term: "Route",
         definition:
           "An active collection of packages assigned to a sector. Tracks package count, weighted count, and the earliest promise time among its packages.",
-        formula: "Route ID = {SectorID}R{NN}, e.g. S01R01, S01R02",
+        formula: "Route ID = R000001, R000002... (globally unique, never repeated). Each route is tied to a sector.",
       },
       {
         term: "Earliest Promise Time",
@@ -109,10 +109,9 @@ const WIKI_SECTIONS: WikiSection[] = [
           "The minimum promiseTime among all packages in a route. Used by route closure pressure to determine when a route should flush.",
       },
       {
-        term: "Route Bundle",
+        term: "Route (closed)",
         definition:
-          "Created when a route cart flushes. Represents a condensed batch of packages that moves through staging and loading as a single unit.",
-        formula: "Bundle ID = BDL{NNNN}, e.g. BDL0001",
+          "When a route cart flushes, the Route is closed and packages become bundled into it. The Route (identified by RouteID) then moves through Staging (dwell) → Loading dock (dwell) → dispatched (packages marked delivered). One RouteID throughout — no separate bundle ID.",
       },
     ],
   },
