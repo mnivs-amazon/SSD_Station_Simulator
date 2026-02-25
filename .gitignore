@@ -11,3 +11,8 @@ node_modules/
 
 # Exclude V3 (vanilla HTML/JS version - keep in separate location)
 SSD_Station_Simulator_V3/
+
+# amplify
+.amplify
+amplify_outputs*
+amplifyconfiguration*
